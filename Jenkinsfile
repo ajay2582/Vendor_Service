@@ -15,7 +15,7 @@ pipeline {
         WAR_FILE     = 'target/vendor.war'
 
         TOMCAT_URL   = 'http://YOUR_VM_HOST:8090'
-        TOMCAT_CREDS = credentials('tomcat-manager')
+        TOMCAT_CREDS = credentials('tomcat-cred')
 
         SONAR_ENV    = 'SonarQube'
         SONAR_KEY    = 'ims-vendor'
