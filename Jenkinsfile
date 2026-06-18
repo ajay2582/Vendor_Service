@@ -11,8 +11,7 @@ pipeline {
         CONTEXT_PATH = '/vendor'
         WAR_FILE     = 'target/vendor.war'
 
-        // ⚠️ IMPORTANT: ensure Tomcat is reachable from Jenkins
-        TOMCAT_URL   = 'http://localhost:8081'
+        TOMCAT_URL   = 'http://10.1.0.27:8081'
 
         SONAR_ENV    = 'SonarQube'
         SONAR_KEY    = 'ims-vendor'
@@ -56,18 +55,12 @@ pipeline {
             }
         }
 
-        // ✅ FIXED: No webhook dependency, no hanging pipeline
+        // ✅ FIXED: NO WEBHOOK DEPENDENCY (NO TIMEOUT ISSUE)
         stage('Quality Gate') {
             steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    script {
-                        def qg = waitForQualityGate()
-                        echo "Sonar Quality Gate status: ${qg.status}"
-
-                        if (qg.status != 'OK') {
-                            error "❌ Pipeline failed due to SonarQube Quality Gate: ${qg.status}"
-                        }
-                    }
+                script {
+                    def qg = waitForQualityGate abortPipeline: true
+                    echo "Sonar Quality Gate status: ${qg.status}"
                 }
             }
         }
