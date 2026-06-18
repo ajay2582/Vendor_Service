@@ -26,12 +26,7 @@ public class VendorController {
 	 * */
 	@Autowired
 	private VendorService vendorService;
-	
-	
-	@RequestMapping(value="/", method=RequestMethod.GET)
-	public String index() {
-		return "Welcome to Spring Boot Vendor Service API!";
-	}
+        
 
 	
 	/* 
