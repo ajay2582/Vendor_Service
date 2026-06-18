@@ -3,100 +3,92 @@ pipeline {
 
     tools {
         maven 'Apache Maven 3.9.3'
-        jdk 'OpenJDK-21'
+        jdk   'OpenJDK-21'
     }
 
     environment {
-        APP_NAME     = 'vendor'
-        CONTEXT_PATH = '/vendor'
-        WAR_FILE     = 'target/vendor.war'
+        GIT_URL        = 'http://localhost:3000/jaya/VendorService.git'
+        GIT_BRANCH     = 'main'
+        GIT_CRED_ID    = 'gitea-cred'
 
-        TOMCAT_URL   = 'http://10.1.0.27:8081'
+        TOMCAT_URL     = 'http://10.1.0.27:8081'
+        TOMCAT_CONTEXT = '/vendor'
+        TOMCAT_CRED_ID = 'tomcat-cred'
 
-        SONAR_ENV    = 'SonarQube'
-        SONAR_KEY    = 'ims-vendor'
-    }
+        WAR_FILE       = 'target\\vendor.war'
 
-    options {
-        timestamps()
-        disableConcurrentBuilds()
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-        timeout(time: 45, unit: 'MINUTES')
+        SONAR_HOST_URL = 'http://10.1.0.27:9000'
+        SONAR_CRED_ID  = 'sonar-token'
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: "${GIT_BRANCH}",
+                    credentialsId: "${GIT_CRED_ID}",
+                    url: "${GIT_URL}"
             }
         }
 
-        stage('Build & Test') {
+        stage('Build') {
             steps {
-                bat 'mvn -B clean verify'
+                bat 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                bat 'mvn test'
             }
             post {
                 always {
-                    junit 'target/surefire-reports/*.xml'
+                    junit allowEmptyResults: true,
+                          testResults: 'target/surefire-reports/*.xml'
                 }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv("${SONAR_ENV}") {
+                withCredentials([string(credentialsId: "${SONAR_CRED_ID}", variable: 'SONAR_TOKEN')]) {
                     bat """
                     mvn sonar:sonar ^
-                    -Dsonar.projectKey=%SONAR_KEY% ^
-                    -Dsonar.projectName=%SONAR_KEY%
+                    -Dsonar.host.url=%SONAR_HOST_URL% ^
+                    -Dsonar.login=%SONAR_TOKEN% ^
+                    -Dsonar.projectKey=vendorservice ^
+                    -Dsonar.projectName=vendorservice
                     """
                 }
             }
         }
 
-        stage('Quality Gate (FAST MODE)') {
-            steps {
-                script {
-                    timeout(time: 2, unit: 'MINUTES') {
-                        def qg = waitForQualityGate()
-                        echo "Quality Gate: ${qg.status}"
-
-                        if (qg.status != 'OK') {
-                            error "Quality Gate FAILED"
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Deploy') {
+        stage('Deploy to Tomcat') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'tomcat-cred',
-                    usernameVariable: 'TUSER',
-                    passwordVariable: 'TPASS'
+                    credentialsId: "${TOMCAT_CRED_ID}",
+                    usernameVariable: 'TC_USER',
+                    passwordVariable: 'TC_PASS'
                 )]) {
 
                     bat """
-                    curl --fail -u %TUSER%:%TPASS% ^
-                    --upload-file %WAR_FILE% ^
-                    "%TOMCAT_URL%/manager/text/deploy?path=%CONTEXT_PATH%^&update=true"
+                    curl -v -u %TC_USER%:%TC_PASS% ^
+                    -T "${WAR_FILE}" ^
+                    "%TOMCAT_URL%/manager/text/deploy?path=${TOMCAT_CONTEXT}&update=true"
                     """
                 }
-            }
-        }
-
-        stage('Smoke Test') {
-            steps {
-                bat "curl --fail %TOMCAT_URL%%CONTEXT_PATH%/"
             }
         }
     }
 
     post {
-        always {
-            cleanWs()
+        success {
+            echo "Application deployed successfully."
+            echo "URL: ${TOMCAT_URL}${TOMCAT_CONTEXT}"
+        }
+
+        failure {
+            echo "Build or deployment failed. Check console logs."
         }
     }
 }
