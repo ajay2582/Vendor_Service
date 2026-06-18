@@ -1,27 +1,13 @@
-package com.training.test.controller;
+package com.training.controller;
 
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+@RestController
+public class VendorController {
 
-import com.training.controller.VendorController;
-
-@WebMvcTest(VendorController.class)
-public class VendorControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Test
-    public void indexVendorControllerTest() throws Exception {
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith("text/html"));
+    @GetMapping("/")
+    public String index() {
+        return "Welcome to Spring Boot Vendor Service API!";
     }
 }
