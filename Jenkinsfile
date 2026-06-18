@@ -11,7 +11,6 @@ pipeline {
         CONTEXT_PATH = '/vendor'
         WAR_FILE     = 'target/vendor.war'
 
-        // 🔴 UPDATE THIS if Tomcat is on another machine
         TOMCAT_URL   = 'http://localhost:8081'
 
         SONAR_ENV    = 'SonarQube'
@@ -22,7 +21,7 @@ pipeline {
         timestamps()
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
-        timeout(time: 30, unit: 'MINUTES')
+        timeout(time: 45, unit: 'MINUTES')
     }
 
     stages {
@@ -58,8 +57,15 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                script {
+                    timeout(time: 10, unit: 'MINUTES') {
+                        def qg = waitForQualityGate()
+                        echo "Sonar Quality Gate status: ${qg.status}"
+
+                        if (qg.status != 'OK') {
+                            error "Pipeline failed due to SonarQube Quality Gate: ${qg.status}"
+                        }
+                    }
                 }
             }
         }
