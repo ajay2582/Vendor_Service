@@ -55,31 +55,19 @@ pipeline {
             }
         }
 
-        // ✅ FIXED QUALITY GATE (NO WEBHOOK, NO HANGING)
+        // ✅ FIXED QUALITY GATE (RECOMMENDED APPROACH)
         stage('Quality Gate') {
             steps {
-                script {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate()
 
-                    timeout(time: 5, unit: 'MINUTES') {
+                        echo "Sonar Quality Gate status: ${qg.status}"
 
-                        def response = bat(
-                            script: """
-                            curl -s -u admin:admin ^
-                            "http://10.1.0.27:9000/api/qualitygates/project_status?projectKey=%SONAR_KEY%"
-                            """,
-                            returnStdout: true
-                        ).trim()
-
-                        echo "Sonar Quality Gate Response: ${response}"
-
-                        if (response.contains('"status":"OK"')) {
+                        if (qg.status != 'OK') {
+                            error "❌ Quality Gate FAILED: ${qg.status}"
+                        } else {
                             echo "✅ Quality Gate PASSED"
-                        }
-                        else if (response.contains('"status":"ERROR"')) {
-                            error "❌ Quality Gate FAILED"
-                        }
-                        else {
-                            error "❌ Unable to determine Quality Gate status"
                         }
                     }
                 }
