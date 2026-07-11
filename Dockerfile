@@ -23,9 +23,9 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-# Copy generated JAR
-COPY --from=builder /app/target/*.jar app.jar
+# Copy generated WAR artifact
+COPY --from=builder /app/target/*.war app.war
 
 EXPOSE 8080
 
-ENTRYPOINT ["java","-jar","app.jar"]
+ENTRYPOINT ["java","-jar","app.war"]
